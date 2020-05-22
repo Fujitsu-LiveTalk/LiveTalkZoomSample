@@ -1,0 +1,2 @@
+# LiveTalkZoomSample
+LiveTalkでの音声認識結果および翻訳結果をZoomの字幕に出力するサンプル
