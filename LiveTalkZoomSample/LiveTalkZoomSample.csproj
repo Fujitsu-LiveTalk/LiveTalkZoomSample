@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Authors>FUJITSU SOCIAL SCIENCE LABORATORY LIMITED</Authors>
+    <RepositoryUrl>https://github.com/FujitsuSSL-LiveTalk/LiveTalkAzureTTSSample</RepositoryUrl>
+    <PackageProjectUrl>https://www.fujitsu.com/jp/group/ssl/products/livetalk/</PackageProjectUrl>
+    <Copyright>COPYRIGHT(C) 2020 FUJITSU SOCIAL SCIENCE LABORATORY LIMITED</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="LiveTalk\" />
+    <Folder Include="Converter\" />
+  </ItemGroup>
+
+</Project>
