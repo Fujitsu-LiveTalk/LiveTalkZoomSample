@@ -4,387 +4,227 @@
  * 概要      ：MainViewModel
 */
 using LiveTalkZoomSample.Common;
+using Reactive.Bindings;
+using Reactive.Bindings.Extensions;
 using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Threading;
+using System.ComponentModel.DataAnnotations;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Windows;
 
 namespace LiveTalkZoomSample.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public class MainViewModel : IDisposable
     {
         private Models.ZoomModel Model = new Models.ZoomModel();
         private LiveTalk.FileCollaboration FileInterface = null;
-        private SynchronizationContext Context = SynchronizationContext.Current;
 
-        /// <summary>
-        /// APIトークン
-        /// </summary>
-        public string APIToken
-        {
-            get { return this.Model.APIToken; }
-            set { this.Model.APIToken = value; }
-        }
+        private CompositeDisposable Disposable { get; } = new CompositeDisposable();
 
-        /// <summary>
-        /// 連携ファイル名
-        /// </summary>
-        public string FileName
-        {
-            get { return this.Model.FileName; }
-            set { this.Model.FileName = value; }
-        }
-
-        /// <summary>
-        /// 処理メッセージ
-        /// </summary>
-        public string Message
-        {
-            get { return this.Model.Message; }
-            set { this.Model.Message = value; }
-        }
-
-        /// <summary>
-        /// true:発言者付き字幕
-        /// </summary>
-        public bool IsWithName
-        {
-            get { return this.Model.IsWithName; }
-            set { this.Model.IsWithName = value; }
-        }
-
-        /// <summary>
-        /// 認証PROXYならIDを指定
-        /// </summary>
-        public string ProxyId
-        {
-            get { return this.Model.ProxyId; }
-            set { this.Model.ProxyId = value; }
-        }
-
-        /// <summary>
-        /// 認証PROXYならパスワードを指定
-        /// </summary>
-        public string ProxyPassword
-        {
-            get { return this.Model.ProxyPassword; }
-            set { this.Model.ProxyPassword = value; }
-        }
+        #region "ZoomModel-Property"
+        [Required]       // 必須チェック
+        public ReactiveProperty<string> APIToken { get; }
+        [Required]       // 必須チェック
+        public ReactiveProperty<string> FileName { get; }
+        public ReactiveProperty<string> Message { get; }
+        public ReactiveProperty<bool> IsWithName { get; }
+        public ReactiveProperty<string> ProxyId { get; }
+        public ReactiveProperty<string> ProxyPassword { get; }
+        #endregion
 
         /// <summary>
         /// True:連携開始可能
         /// </summary>
-        private bool _IsCanStart = false;
-        public bool IsCanStart
-        {
-            get { return this._IsCanStart; }
-            set
-            {
-                if (this._IsCanStart != value)
-                {
-                    this._IsCanStart = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+        public ReadOnlyReactiveProperty<bool> IsCanStart { get; }
 
         /// <summary>
         /// True:連携中フラグ
         /// </summary>
-        private bool _IsStarted = false;
-        public bool IsStarted
-        {
-            get { return this._IsStarted; }
-            set
-            {
-                if (this._IsStarted != value)
-                {
-                    this._IsStarted = value;
-                    OnPropertyChanged();
-                    this.SetCanStartFlag();
-                }
-            }
-        }
-        private void SetCanStartFlag()
-        {
-            this.IsCanStart = !string.IsNullOrEmpty(this.APIToken) && !string.IsNullOrEmpty(this.FileName) && !this.IsStarted;
-        }
+        public ReactiveProperty<bool> IsStarted { get; } = new ReactiveProperty<bool>();
 
         /// <summary>
         /// True:高さ最大
         /// </summary>
-        private bool _IsHighHeight = true;
-        public bool IsHighHeight
-        {
-            get { return this._IsHighHeight; }
-            set
-            {
-                if (this._IsHighHeight != value)
-                {
-                    this._IsHighHeight = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+        public ReadOnlyReactiveProperty<bool> IsHighHeight { get; }
 
         public MainViewModel()
         {
-            this.Model.PropertyChanged += (s, e) =>
+            // プロパティ設定
+            this.APIToken = this.Model.ToReactivePropertyAsSynchronized((x) => x.APIToken)
+                .SetValidateAttribute(() => this.APIToken)
+                .AddTo(this.Disposable);
+            this.FileName = this.Model.ToReactivePropertyAsSynchronized((x) => x.FileName)
+                .SetValidateAttribute(() => this.FileName)
+                .AddTo(this.Disposable);
+            this.Message = this.Model.ToReactivePropertyAsSynchronized((x) => x.Message)
+                .AddTo(this.Disposable);
+            this.IsWithName = this.Model.ToReactivePropertyAsSynchronized((x) => x.IsWithName)
+                .AddTo(this.Disposable);
+            this.ProxyId = this.Model.ToReactivePropertyAsSynchronized((x) => x.ProxyId)
+                .AddTo(this.Disposable);
+            this.ProxyPassword = this.Model.ToReactivePropertyAsSynchronized((x) => x.ProxyPassword)
+                .AddTo(this.Disposable);
+
+            // 3つのステータスがすべてFalseの時だけスタートボタンがクリックできる
+            this.IsCanStart = new[]
             {
-                OnPropertyChanged(e.PropertyName);
-                if (e.PropertyName == "APIToken" || e.PropertyName== "FileName")
-                {
-                    this.SetCanStartFlag();
-                }
+                this.APIToken.ObserveHasErrors,
+                this.FileName.ObserveHasErrors,
+                this.IsStarted,
+            }.CombineLatestValuesAreAllFalse()
+             .ToReadOnlyReactiveProperty()
+             .AddTo(this.Disposable);
+
+            // コマンドによりOn/Off制御
+            this.IsHighHeight = this.HighHeightCommand
+                .Select(_ => true)
+                .Merge(this.LowHeightCommand.Select(_ => false))
+                .ToReadOnlyReactiveProperty(initialValue: true)
+                .AddTo(this.Disposable);
+
+            // コマンド設定
+            this.SharedInputCommand = this.IsStarted.Inverse()
+                .ToReactiveCommand()
+                .WithSubscribe(() => this.SharedInput())
+                .AddTo(this.Disposable);
+            this.StartCommand = this.IsCanStart
+                .ToReactiveCommand()
+                .WithSubscribe(() => this.Start())
+                .AddTo(this.Disposable);
+            this.StopCommand = this.IsStarted
+                .ToReactiveCommand()
+                .WithSubscribe(() => this.Stop())
+                .AddTo(this.Disposable);
+            this.ClearCommand = this.IsStarted.Inverse()
+                .ToReactiveCommand()
+                .WithSubscribe(() => this.APIToken.Value = Clipboard.GetText())
+                .AddTo(this.Disposable);
+            this.ExitCommand.Subscribe((x) =>
+            {
+                OnClosed();
+            }).AddTo(this.Disposable);
+
+            // エラーハンドリング
+            this.Model.Threw += (s, e) =>
+            {
+                MessageBox.Show(e.GetException().Message, "LiveTalk Zoom Subtitles Sample", MessageBoxButton.OK, MessageBoxImage.Warning);
             };
-            this.SetCanStartFlag();
         }
 
         /// <summary>
         /// 常時ファイル入力
         /// </summary>
-        RelayCommand _SharedInputCommand;
-        public RelayCommand SharedInputCommand
+        public ReactiveCommand SharedInputCommand { get; }
+        private void SharedInput()
         {
-            get
+            try
             {
-                if (_SharedInputCommand == null)
+                var dialog = new Microsoft.Win32.SaveFileDialog
                 {
-                    _SharedInputCommand = new RelayCommand(() =>
-                    {
-                        try
-                        {
-                            var dialog = new Microsoft.Win32.SaveFileDialog
-                            {
-                                FilterIndex = 1,
-                                Filter = "連携ファイル(*.csv)|*.csv",
-                                Title = "連携ファイル名を指定",
-                                CreatePrompt = true,
-                                OverwritePrompt = false,
-                                DefaultExt = "csv"
-                            };
-                            if (string.IsNullOrEmpty(this.FileName))
-                            {
-                                dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-                                dialog.FileName = "Output.csv";
-                            }
-                            else
-                            {
-                                dialog.InitialDirectory = System.IO.Path.GetDirectoryName(this.FileName);
-                                dialog.FileName = System.IO.Path.GetFileName(this.FileName);
-                            }
-                            if (dialog.ShowDialog() == true)
-                            {
-                                this.FileName = dialog.FileName;
-                            }
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(ex.Message);
-                        }
-                    });
+                    FilterIndex = 1,
+                    Filter = "連携ファイル(*.csv)|*.csv",
+                    Title = "連携ファイル名を指定",
+                    CreatePrompt = true,
+                    OverwritePrompt = false,
+                    DefaultExt = "csv"
+                };
+                if (string.IsNullOrEmpty(this.FileName.Value))
+                {
+                    dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+                    dialog.FileName = "Output.csv";
                 }
-                return _SharedInputCommand;
+                else
+                {
+                    dialog.InitialDirectory = System.IO.Path.GetDirectoryName(this.FileName.Value);
+                    dialog.FileName = System.IO.Path.GetFileName(this.FileName.Value);
+                }
+                if (dialog.ShowDialog() == true)
+                {
+                    this.FileName.Value = dialog.FileName;
+                }
+
             }
-            set
+            catch (Exception ex)
             {
-                _SharedInputCommand = value;
+                MessageBox.Show(ex.Message);
             }
         }
 
         /// <summary>
         /// 字幕送信開始
         /// </summary>
-        RelayCommand _StartCommand;
-        public RelayCommand StartCommand
-        {
-            get
-            {
-                if (_StartCommand == null)
-                {
-                    _StartCommand = new RelayCommand(() =>
-                    {
-                        try
-                        {
-                            this.Start();
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(ex.Message);
-                        }
-                    });
-                }
-                return _StartCommand;
-            }
-            set
-            {
-                _StartCommand = value;
-            }
-        }
+        public ReactiveCommand StartCommand { get; }
         private void Start()
         {
-            // 連携ファイルをクリア
-            if (System.IO.File.Exists(this.FileName))
+            try
             {
-                System.IO.File.Delete(this.FileName);
+                // 連携ファイルをクリア
+                if (System.IO.File.Exists(this.FileName.Value))
+                {
+                    System.IO.File.Delete(this.FileName.Value);
+                }
+
+                // ファイル更新検出時の処理
+                this.FileInterface = new LiveTalk.FileCollaboration(this.FileName.Value, string.Empty);
+                this.FileInterface.RemoteMessageReceived += ((s) =>
+                {
+                    try
+                    {
+                        this.Model.SendMessage(s);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message);
+                    }
+                });
+
+                //　ファイル更新検出開始
+                this.FileInterface.WatchFileSart();
+                this.IsStarted.Value = true;
             }
-
-            // ファイル更新検出時の処理
-            this.FileInterface = new LiveTalk.FileCollaboration(this.FileName, string.Empty);
-            this.FileInterface.RemoteMessageReceived += ((s) =>
+            catch (Exception ex)
             {
-                try
-                {
-                    this.Model.SendMessage(s);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
-            });
-
-            //　ファイル更新検出開始
-            this.FileInterface.WatchFileSart();
-            this.IsStarted = true;
+                MessageBox.Show(ex.Message);
+            }
         }
 
         /// <summary>
         /// 字幕送信終了
         /// </summary>
-        RelayCommand _StopCommand;
-        public RelayCommand StopCommand
-        {
-            get
-            {
-                if (_StopCommand == null)
-                {
-                    _StopCommand = new RelayCommand(() =>
-                    {
-                        try
-                        {
-                            this.Stop();
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(ex.Message);
-                        }
-                    });
-                }
-                return _StopCommand;
-            }
-            set
-            {
-                _StopCommand = value;
-            }
-        }
+        public ReactiveCommand StopCommand { get; }
         private void Stop()
         {
-            // ファイル更新検出終了
-            this.FileInterface?.WatchFileStop();
-            this.IsStarted = false;
+            try
+            {
+                // ファイル更新検出終了
+                this.FileInterface?.WatchFileStop();
+                this.IsStarted.Value = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         /// <summary>
         /// 画面に設定項目を表示する
         /// </summary>
-        RelayCommand _HighHeightCommand;
-        public RelayCommand HighHeightCommand
-        {
-            get
-            {
-                if (_HighHeightCommand == null)
-                {
-                    _HighHeightCommand = new RelayCommand(() =>
-                    {
-                        try
-                        {
-                            this.IsHighHeight = true;
-                        }
-                        catch { }
-                    });
-                }
-                return _HighHeightCommand;
-            }
-            set
-            {
-                _HighHeightCommand = value;
-            }
-        }
+        public ReactiveCommand HighHeightCommand { get; } = new ReactiveCommand();
 
         /// <summary>
         /// 画面から設定項目を隠す
         /// </summary>
-        RelayCommand _LowHeightCommand;
-        public RelayCommand LowHeightCommand
-        {
-            get
-            {
-                if (_LowHeightCommand == null)
-                {
-                    _LowHeightCommand = new RelayCommand(() =>
-                    {
-                        try
-                        {
-                            this.IsHighHeight = false;
-                        }
-                        catch { }
-                    });
-                }
-                return _LowHeightCommand;
-            }
-            set
-            {
-                _LowHeightCommand = value;
-            }
-        }
+        public ReactiveCommand LowHeightCommand { get; } = new ReactiveCommand();
 
         /// <summary>
-        /// APIトークンのクリア
+        /// APIトークンのコピー
         /// </summary>
-        RelayCommand _ClearCommand;
-        public RelayCommand ClearCommand
-        {
-            get
-            {
-                if (_ClearCommand == null)
-                {
-                    _ClearCommand = new RelayCommand(() =>
-                    {
-                        this.APIToken = Clipboard.GetText();
-                    });
-                }
-                return _ClearCommand;
-            }
-            set
-            {
-                _ClearCommand = value;
-            }
-        }
+        public ReactiveCommand ClearCommand { get; }
 
         /// <summary>
         /// 画面クローズ
         /// </summary>
-        RelayCommand _ExitCommand;
-        public RelayCommand ExitCommand
-        {
-            get
-            {
-                if (_ExitCommand == null)
-                {
-                    _ExitCommand = new RelayCommand(() =>
-                    {
-                        OnClosed();
-                    });
-                }
-                return _ExitCommand;
-            }
-            set
-            {
-                _ExitCommand = value;
-            }
-        }
+        public ReactiveCommand ExitCommand { get; } = new ReactiveCommand();
 
         public event EventHandler Closed;
         protected virtual void OnClosed()
@@ -392,10 +232,9 @@ namespace LiveTalkZoomSample.ViewModels
             this.Closed?.Invoke(this, new EventArgs());
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected virtual void OnPropertyChanged([CallerMemberName]String propertyName = "")
+        public void Dispose()
         {
-            this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            this.Disposable.Dispose();
         }
     }
 }

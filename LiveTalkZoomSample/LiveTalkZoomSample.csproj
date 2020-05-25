@@ -8,11 +8,15 @@
     <RepositoryUrl>https://github.com/FujitsuSSL-LiveTalk/LiveTalkAzureTTSSample</RepositoryUrl>
     <PackageProjectUrl>https://www.fujitsu.com/jp/group/ssl/products/livetalk/</PackageProjectUrl>
     <Copyright>COPYRIGHT(C) 2020 FUJITSU SOCIAL SCIENCE LABORATORY LIMITED</Copyright>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="LiveTalk\" />
-    <Folder Include="Converter\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ReactiveProperty" Version="7.0.1" />
   </ItemGroup>
 
 </Project>

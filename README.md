@@ -54,6 +54,12 @@ LiveTalkの常時ファイル出力のファイル名を指定して [スター�
 4. 字幕表示時間の調整などはできませんので、長いと読み切れません。１文１文を簡素に話すようにしましょう。
 5. Zoom 側で字幕が表示されないときは、Zoom 側の [サブタイトル表示]操作で字幕のオフ/オンをすることで再開できる場合があります。
 
+# オープンソース
+本サンプルコードは、以下のオープンソース成果物を利用しています。
+
+ReactiveProperty Copyright (c) 2018 neuecc, xin9le, okazuki
+[https://github.com/runceel/ReactiveProperty/blob/master/LICENSE.txt](https://github.com/runceel/ReactiveProperty/blob/master/LICENSE.txt)
+
 # 連絡事項
 本ソースコードは、LiveTalk の保守サポート範囲に含まれません。  
 頂いた issue については、必ずしも返信できない場合があります。  

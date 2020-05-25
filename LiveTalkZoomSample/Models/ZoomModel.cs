@@ -5,7 +5,6 @@
 */
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Net.Http;
@@ -196,7 +195,7 @@ namespace LiveTalkZoomSample.Models
                                 {
                                     System.Diagnostics.Debug.WriteLine(ex.Message);
                                     this.LastAccessTokenError = ex.Message;
-                                    throw ex; // エラー通知（通知方法はMainViewModelで規定）
+                                    this.OnThrew(ex);    // エラー通知（通知方法はMainViewModelで規定）
                                 }
                             }
                         }
@@ -210,6 +209,12 @@ namespace LiveTalkZoomSample.Models
             ch.Proxy = System.Net.WebRequest.DefaultWebProxy;
             ch.Proxy.Credentials = new System.Net.NetworkCredential(this.ProxyId, this.ProxyPassword);
             return ch;
+        }
+
+        public event ErrorEventHandler Threw;
+        protected virtual void OnThrew(Exception ex)
+        {
+            this.Threw?.Invoke(this, new ErrorEventArgs(ex));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LiveTalkZoomSample.Views"
-        xmlns:Converter="clr-namespace:LiveTalkZoomSample.Converter" x:Name="window" x:Class="LiveTalkZoomSample.Views.MainWindow"
+        x:Name="window" x:Class="LiveTalkZoomSample.Views.MainWindow"
         mc:Ignorable="d"
         Title="LiveTalk Zoom Sibtitles Sample" AllowsTransparency="True" WindowStyle="None"
         Background="Transparent"
@@ -13,7 +13,6 @@
         DataContext="{Binding ViewModel, RelativeSource={RelativeSource Mode=Self}}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <Converter:NegativeConverter x:Key="NegativeConverter"/>
     </Window.Resources>
 
     <Grid x:Name="myGrid" Opacity="0.9">
@@ -23,7 +22,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="1" Background="#FFD5D5D5" Visibility="{Binding IsHighHeight, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="2,0,2,0">
+        <Grid Grid.Row="1" Background="#FFD5D5D5" Visibility="{Binding IsHighHeight.Value, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="2,0,2,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="110" />
                 <ColumnDefinition Width="*" />
@@ -37,18 +36,18 @@
                 <RowDefinition Height="1*" />
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Grid.Column="0"  Content="API Token" VerticalAlignment="Center" />
-            <TextBox Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Margin="4" Text="{Binding APIToken, Mode=TwoWay}" Height="78" VerticalAlignment="Center" VerticalContentAlignment="Top" TextWrapping="WrapWithOverflow"  IsReadOnly="{Binding IsStarted}" />
-            <Button Grid.Row="1" Grid.Column="0" Padding="4" Content="API Token 貼り付け" VerticalAlignment="Top" HorizontalAlignment="Center" Command="{Binding ClearCommand}" IsEnabled="{Binding IsStarted, Converter={StaticResource NegativeConverter}}"/>
+            <TextBox Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Margin="4" Text="{Binding APIToken.Value, Mode=TwoWay}" Height="78" VerticalAlignment="Center" VerticalContentAlignment="Top" TextWrapping="WrapWithOverflow"  IsReadOnly="{Binding IsStarted.Value}" />
+            <Button Grid.Row="1" Grid.Column="0" Padding="4" Content="API Token 貼り付け" VerticalAlignment="Top" HorizontalAlignment="Center" Command="{Binding ClearCommand}" />
 
             <Label Grid.Row="2" Grid.Column="0"  Content="連携ファイル" VerticalAlignment="Center" />
-            <TextBox Grid.Row="2" Grid.Column="1" Margin="4" Text="{Binding FileName, Mode=TwoWay}" Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="{Binding IsStarted}" />
+            <TextBox Grid.Row="2" Grid.Column="1" Margin="4" Text="{Binding FileName.Value, Mode=TwoWay}" Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="{Binding IsStarted.Value}" />
 
             <Label Grid.Row="3" Grid.Column="0"  Content="発話者表示" VerticalAlignment="Center" />
-            <CheckBox Grid.Row="3" Grid.Column="1" Margin="4" IsChecked="{Binding IsWithName, Mode=TwoWay}"  Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" />
+            <CheckBox Grid.Row="3" Grid.Column="1" Margin="4" IsChecked="{Binding IsWithName.Value, Mode=TwoWay}"  Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" />
 
             <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="4,0,16,0" HorizontalAlignment="Right">
-                <Button Content="Start" Margin="0,0,4,0" FontSize="14" Width="88" Height="27" Command="{Binding StartCommand}" IsEnabled="{Binding IsCanStart}"/>
-                <Button Content="Stop" Margin="4,0,0,0" FontSize="14" Width="88" Height="27" Command="{Binding StopCommand}" IsEnabled="{Binding IsStarted}"/>
+                <Button Content="Start" Margin="0,0,4,0" FontSize="14" Width="88" Height="27" Command="{Binding StartCommand}" IsEnabled="{Binding IsCanStart.Value}"/>
+                <Button Content="Stop" Margin="4,0,0,0" FontSize="14" Width="88" Height="27" Command="{Binding StopCommand}" IsEnabled="{Binding IsStarted.Value}"/>
             </StackPanel>
 
             <Label Grid.Row="5" Grid.Column="0"  Content="Proxy ID/Passw" VerticalAlignment="Center" />
@@ -57,8 +56,8 @@
                     <ColumnDefinition />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" Margin="4" Text="{Binding ProxyId, Mode=TwoWay}" Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="{Binding IsStarted}" />
-                <TextBox Grid.Column="1" Margin="4" Text="{Binding ProxyPassword, Mode=TwoWay}" Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="{Binding IsStarted}" />
+                <TextBox Grid.Column="0" Margin="4" Text="{Binding ProxyId.Value, Mode=TwoWay}" Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="{Binding IsStarted.Value}" />
+                <TextBox Grid.Column="1" Margin="4" Text="{Binding ProxyPassword.Value, Mode=TwoWay}" Height="34" VerticalAlignment="Center" VerticalContentAlignment="Center" IsReadOnly="{Binding IsStarted.Value}" />
             </Grid>
         </Grid>
         <Rectangle Stroke="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" StrokeThickness="2" Grid.Row="0" Grid.RowSpan="3"/>
@@ -73,14 +72,14 @@
             
             <Menu Grid.Column="1" VerticalAlignment="Center" Background="Transparent">
                 <MenuItem Header="ファイル(_F)">
-                    <MenuItem Command="{Binding SharedInputCommand}" Header="常時ファイル入力(_I)..." ToolTip="{Binding FileName}" IsEnabled="{Binding IsStarted, Converter={StaticResource NegativeConverter}}"/>
+                    <MenuItem Command="{Binding SharedInputCommand}" Header="常時ファイル入力(_I)..." ToolTip="{Binding FileName.Value}" />
                     <Separator />
                     <MenuItem Command="{Binding ExitCommand}" Header="終了(_X)" />
                 </MenuItem>
             </Menu>
-
+            
             <Label Grid.Column="2" Content="{Binding Title, ElementName=window}" Foreground="{DynamicResource {x:Static SystemColors.ActiveCaptionTextBrushKey}}" />
-
+            
             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="5"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top">
@@ -91,7 +90,8 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}">
-            <Label Content="{Binding Message}" Height="24" Margin="4,0,4,0" VerticalContentAlignment="Center" />
+            <Label Content="{Binding Message.Value}" Height="24" Margin="4,0,4,0" VerticalContentAlignment="Center" />
         </StackPanel>
+
     </Grid>
 </Window>
