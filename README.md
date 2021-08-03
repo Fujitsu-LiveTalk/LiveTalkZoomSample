@@ -39,6 +39,7 @@ Zoom の手入力での字幕入力を試して動作を確認します。
 
 ## LiveTalkをファイル連携を開始
 LiveTalkの常時ファイル出力のファイル名を指定して [スタート] ボタンをクリックします。
+> 重要：LiveTalk V2.8.7 以降は、LiveTalk自体から直接Zoom字幕へ連携可能です。本リポジトリではなくLiveTalk本体の機能をご利用ください。詳細は製品添付の利用者マニュアルをご参照ください。
 
 [![LiveTalkと連携したZoom字幕表示のデモムービー (YouTube)](https://img.youtube.com/vi/kxqhoF8xMI0/0.jpg)](https://www.youtube.com/watch?v=kxqhoF8xMI0)
 
